@@ -1,0 +1,66 @@
+pipeline {
+    agent {
+        label "Java"
+    }
+    environment {
+        DOCKER_HUB_CREDENTIALS = 'docker-hub-credentials' // Docker Hub credentials ID in Jenkins
+        IMAGE_NAME = 'prathesh67/my-java-webapp'  // Docker image name
+        TAG = 'latest'  // Image tag
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                // Checkout the code from the Git repository
+                checkout scm
+            }
+        }
+        stage('Build Java App') {
+            steps {
+                // Run Maven clean install to build the Java application
+                sh 'mvn clean install'
+            }
+        }
+        stage('Copy WAR File to Workspace') {
+            steps {
+                script {
+                    // Copy the .war file into the Jenkins workspace (this will make it accessible to the Docker build)
+                    sh "cp /home/jslave/.m2/repository/com/maven/SimpleWebApplication/9.1.14/SimpleWebApplication-9.1.14.war /home/jslave/workspace/Assignment/SimpleWebApplication-9.1.14.war"
+                }
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    // Build the Docker image using the copied .war file in the workspace
+                    sh "docker build -t ${IMAGE_NAME}:${TAG} ."
+                }
+            }
+        }
+        stage('Login to Docker Hub') {
+            steps {
+                script {
+                    // Login to Docker Hub using Jenkins credentials
+                    docker.withRegistry('https://registry.hub.docker.com', DOCKER_HUB_CREDENTIALS) {
+                        echo 'Successfully logged into Docker Hub'
+                    }
+                }
+            }
+        }
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    // Push the Docker image to Docker Hub
+                    // Use docker.image(IMAGE_NAME) to push
+                    docker.withRegistry('https://registry.hub.docker.com', DOCKER_HUB_CREDENTIALS) {
+                        docker.image("${IMAGE_NAME}:${TAG}").push()
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            cleanWs()  // Clean workspace after build
+        }
+    }
+}

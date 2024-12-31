@@ -1,0 +1,53 @@
+pipeline {
+  agent {
+    label "Java"
+  }
+  
+  stages {
+    stage('Build') {
+      steps {
+        sh 'mvn clean install'
+      }
+    }
+    
+    stage('Upload Snapshot') {
+      steps {
+        nexusArtifactUploader(
+          artifacts: [[
+            artifactId: 'SimpleWebApplication', 
+            classifier: '', 
+            file: 'target/SimpleWebApplication.war', 
+            type: 'war'
+          ]], 
+          credentialsId: 'nexus-credentials', 
+          groupId: 'com.maven', 
+          nexusUrl: 'http://52.66.111.80:8081/repository/maven-snapshots/', 
+          nexusVersion: 'nexus3', 
+          protocol: 'http', 
+          repository: 'maven-snapshots', 
+          version: '1.0.0-SNAPSHOT'
+        )
+      }
+    }
+    
+    stage('Upload Release') {
+      steps {
+        nexusArtifactUploader(
+          artifacts: [[
+            artifactId: 'SimpleWebApplication', 
+            classifier: '', 
+            file: 'target/SimpleWebApplication.war', 
+            type: 'war'
+          ]], 
+          credentialsId: 'nexus-credentials', 
+          groupId: 'com.maven', 
+          nexusUrl: 'http://52.66.111.80:8081/repository/maven-releases/', 
+          nexusVersion: 'nexus3', 
+          protocol: 'http', 
+          repository: 'maven-releases', 
+          version: '1.0.0'
+        )
+      }
+    }
+  }
+}
